@@ -8,6 +8,7 @@ package com.tssg.sleepanalyzer_kotlin
 // kt:
 
 import java.io.FileWriter
+import java.io.IOException
 import java.io.PrintWriter
 // kt:
 
@@ -24,21 +25,26 @@ import java.util.concurrent.atomic.AtomicReference
 
 import com.choosemuse.example.libmuse.R
 import com.choosemuse.libmuse.Accelerometer
+import com.choosemuse.libmuse.AnnotationData
 import com.choosemuse.libmuse.ConnectionState
 import com.choosemuse.libmuse.Eeg
 import com.choosemuse.libmuse.LibmuseVersion
 import com.choosemuse.libmuse.MessageType
 import com.choosemuse.libmuse.Muse
 import com.choosemuse.libmuse.MuseArtifactPacket
+import com.choosemuse.libmuse.MuseConfiguration
 import com.choosemuse.libmuse.MuseConnectionListener
 import com.choosemuse.libmuse.MuseConnectionPacket
 import com.choosemuse.libmuse.MuseDataListener
 import com.choosemuse.libmuse.MuseDataPacket
 import com.choosemuse.libmuse.MuseDataPacketType
 import com.choosemuse.libmuse.MuseFileFactory
+import com.choosemuse.libmuse.MuseFileReader
 import com.choosemuse.libmuse.MuseFileWriter
 import com.choosemuse.libmuse.MuseListener
 import com.choosemuse.libmuse.MuseManagerAndroid
+import com.choosemuse.libmuse.MuseVersion
+import com.choosemuse.libmuse.Result
 import com.choosemuse.libmuse.ResultLevel
 
 import android.Manifest
@@ -47,6 +53,7 @@ import android.app.AlertDialog
 import android.graphics.Typeface
 import android.content.DialogInterface
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Looper
@@ -120,7 +127,7 @@ class MainActivity : Activity(), OnClickListener {
 	/**
 	 * Tag used for logging purposes.
 	 */
-	protected val TAG = javaClass.simpleName
+	protected val TAG = javaClass.getSimpleName()
 
 	// smf
 	internal var fromFile = false
@@ -369,15 +376,15 @@ class MainActivity : Activity(), OnClickListener {
 			// Get the test file name
 			val sourceFileName = sourceFile.name
 
-			Log.w(method, "playing test file: " + sourceFileName)
+			Log.w(method, "playing test file: $sourceFileName")
 
 			// Set the flag
 			fromFile = true
 
 			val statusText = findViewById(R.id.con_status) as TextView
-			statusText.text = ( "Reading from test file — "
-								+ sourceFileName +
-								"\nMuse headband connections are disabled!\n")
+			statusText.text = ("Reading from test file — "
+					+ sourceFileName +
+					"\nMuse headband connections are disabled!\n")
 			statusText.setTypeface(null, Typeface.BOLD_ITALIC)
 
 			// Disable the buttons and spinner when reading from a file
@@ -394,21 +401,34 @@ class MainActivity : Activity(), OnClickListener {
 		} else {
 			Log.w(method, "test file doesn't exist")
 
-			//kt:
-			// start the audio feedback thread
-			val audioFeedbackThread = Thread(Runnable {
-				stopSounds = 0
-				playAudioFeedback(0)
-			})
-			audioFeedbackThread.name = "Audio Feedback"
-			audioFeedbackThread.start()
-			// kt:
+			// TODO
+			// Check for faulty API
+			//	API 25 (7.1.1)
+			// has problem with this audioFeedbackThread
+			if (!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) {
+				//kt:
+				// start the audio feedback thread
+				val audioFeedbackThread = Thread(Runnable {
+					stopSounds = 0
+					playAudioFeedback(0)
+				})
+				audioFeedbackThread.name = "Audio Feedback"
+				audioFeedbackThread.start()
+				// kt:
+			}
+
 		}
 		// RB
 
-		// Check for APIs 17 & 18
-		// TODO - API 17 (4.2.2) & 18 (4.3.1) have faulty Tone Generator support
-		if (!android.os.Build.VERSION.RELEASE.startsWith("4.2.") && !android.os.Build.VERSION.RELEASE.startsWith("4.3.")) {
+		// TODO
+		// Check for faulty APIs
+		//	API 17 (4.2.2) &
+		//	API 18 (4.3.1) &
+		//	API 25 (7.1.1)
+		//	have faulty Tone Generator support
+		if (!android.os.Build.VERSION.RELEASE.startsWith("4.2.") &&
+			!android.os.Build.VERSION.RELEASE.startsWith("4.3.") &&
+			!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) {
 			// kt: initial audio test
 			Log.d("Muse Headband", "sound test start")
 			stopSounds = 0
@@ -514,7 +534,7 @@ class MainActivity : Activity(), OnClickListener {
 		Log.i(TAG, "ensurePermissions()")
 
 		if (ContextCompat.checkSelfPermission(this,
-				Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+						Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 			// We don't have the ACCESS_COARSE_LOCATION permission so create the dialogs asking
 			// the user to grant us the permission.
 
@@ -668,22 +688,23 @@ class MainActivity : Activity(), OnClickListener {
 				}
 			// kt:
 			// 1.3.0 case HORSESHOE:
-					//case ALPHA_SCORE:
-					// case BETA_RELATIVE:
-					//case BETA_SCORE:
-					//case DELTA_RELATIVE:
-					//case DELTA_SCORE:
-					//case GAMMA_RELATIVE:
-					//case GAMMA_SCORE:
-					//case THETA_RELATIVE:
-					//case THETA_SCORE:
 				MuseDataPacketType.HSI,
 				MuseDataPacketType.EEG,
 				MuseDataPacketType.ALPHA_ABSOLUTE,
-				MuseDataPacketType.BETA_ABSOLUTE,
+					//case ALPHA_SCORE:
+				MuseDataPacketType.
+				BETA_ABSOLUTE,
+					// case BETA_RELATIVE:
+					//case BETA_SCORE:
 				MuseDataPacketType.DELTA_ABSOLUTE,
+					//case DELTA_RELATIVE:
+					//case DELTA_SCORE:
 				MuseDataPacketType.GAMMA_ABSOLUTE,
+					//case GAMMA_RELATIVE:
+					//case GAMMA_SCORE:
 				MuseDataPacketType.THETA_ABSOLUTE ->
+					//case THETA_RELATIVE:
+					//case THETA_SCORE:
 					// 1.3.0 handleWaivePacket(p, p.getValues());
 					handleWaivePacket(p, p.values())
 			// kt:
@@ -707,12 +728,11 @@ class MainActivity : Activity(), OnClickListener {
 
 		//final ArrayList<Double> data = p.getValues();
 		val got_data = false
-//kotlin if (pkt_timestamp == 0L || pkt_timestamp == -1) {
-		if (pkt_timestamp.equals(0L) || pkt_timestamp.equals(-1)) {
+//		if (pkt_timestamp == 0L || pkt_timestamp == -1) {
+		if (pkt_timestamp == 0L || pkt_timestamp.equals(-1)) {
 			// 1.3.0 pkt_timestamp = p.getTimestamp();
 			pkt_timestamp = p.timestamp()
-//kotlin	if (pkt_timestamp_ref == 0L) {
-			if (pkt_timestamp_ref.equals(0L)) {
+			if (pkt_timestamp_ref == 0L) {
 				pkt_timestamp_ref = pkt_timestamp
 			}
 		}
@@ -927,9 +947,9 @@ class MainActivity : Activity(), OnClickListener {
 			//TextView tp10 = (TextView) findViewById(R.id.eeg_tp10);
 			//tp9.setText(String.format("%6.2f", data.get(Eeg.TP9.ordinal())));
 			// 1.3.0 fp1.setText(String.format("%6.2f", data.get(Eeg.FP1.ordinal())));
-			fp1.text = String.format("%6.2f", data[Eeg.EEG2.ordinal])
+			fp1.setText(String.format("%6.2f", data[Eeg.EEG2.ordinal]))
 			// 1.3.0 fp2.setText(String.format("%6.2f", data.get(Eeg.FP2.ordinal())));
-			fp2.text = String.format("%6.2f", data[Eeg.EEG3.ordinal])
+			fp2.setText(String.format("%6.2f", data[Eeg.EEG3.ordinal]))
 			//tp10.setText(String.format("%6.2f", data.get(Eeg.TP10.ordinal())));
 		}
 	}
@@ -1003,9 +1023,9 @@ class MainActivity : Activity(), OnClickListener {
 		val acc_x = findViewById(R.id.acc_x) as TextView
 		val acc_y = findViewById(R.id.acc_y) as TextView
 		val acc_z = findViewById(R.id.acc_z) as TextView
-		acc_x.text = String.format("%6.2f", accelBuffer[0])
-		acc_y.text = String.format("%6.2f", accelBuffer[1])
-		acc_z.text = String.format("%6.2f", accelBuffer[2])
+		acc_x.setText(String.format("%6.2f", accelBuffer[0]))
+		acc_y.setText(String.format("%6.2f", accelBuffer[1]))
+		acc_z.setText(String.format("%6.2f", accelBuffer[2]))
 	}
 
 	private fun updateEeg() {
@@ -1013,21 +1033,21 @@ class MainActivity : Activity(), OnClickListener {
 		val fp1 = findViewById(R.id.eeg_af7) as TextView
 		val fp2 = findViewById(R.id.eeg_af8) as TextView
 		val tp10 = findViewById(R.id.eeg_tp10) as TextView
-		tp9.text = String.format("%6.2f", eegBuffer[0])
-		fp1.text = String.format("%6.2f", eegBuffer[1])
-		fp2.text = String.format("%6.2f", eegBuffer[2])
-		tp10.text = String.format("%6.2f", eegBuffer[3])
+		tp9.setText(String.format("%6.2f", eegBuffer[0]))
+		fp1.setText(String.format("%6.2f", eegBuffer[1]))
+		fp2.setText(String.format("%6.2f", eegBuffer[2]))
+		tp10.setText(String.format("%6.2f", eegBuffer[3]))
 	}
 
 	private fun updateAlpha() {
 		val elem1 = findViewById(R.id.elem1) as TextView
-		elem1.text = String.format("%6.2f", alphaBuffer[0])
+		elem1.setText(String.format("%6.2f", alphaBuffer[0]))
 		val elem2 = findViewById(R.id.elem2) as TextView
-		elem2.text = String.format("%6.2f", alphaBuffer[1])
+		elem2.setText(String.format("%6.2f", alphaBuffer[1]))
 		val elem3 = findViewById(R.id.elem3) as TextView
-		elem3.text = String.format("%6.2f", alphaBuffer[2])
+		elem3.setText(String.format("%6.2f", alphaBuffer[2]))
 		val elem4 = findViewById(R.id.elem4) as TextView
-		elem4.text = String.format("%6.2f", alphaBuffer[3])
+		elem4.setText(String.format("%6.2f", alphaBuffer[3]))
 	}
 
 	/**
@@ -1169,7 +1189,7 @@ class MainActivity : Activity(), OnClickListener {
 							" - " + museVersion.firmwareVersion +
 							" - " + Integer.toString(
 							museVersion.protocolVersion)
-					Log.d(tag, "version " + version)
+					Log.d(tag, "version $version")
 					val activity = dataListener!!.activityRef.get()
 					// UI thread is used here only because we need to update
 					// TextView values. You don't have to use another thread, unless
@@ -1275,7 +1295,7 @@ class MainActivity : Activity(), OnClickListener {
 	internal inner class MuseL(val activityRef: WeakReference<MainActivity>) : MuseListener() {
 
 		override fun museListChanged() {
-//kotlin	activityRef.get().museListChanged()
+//			activityRef.get().museListChanged()
 			activityRef.get()?.museListChanged()
 		}
 	}
@@ -1283,7 +1303,7 @@ class MainActivity : Activity(), OnClickListener {
 	internal inner class ConnectionListener(val activityRef: WeakReference<MainActivity>) : MuseConnectionListener() {
 
 		override fun receiveMuseConnectionPacket(p: MuseConnectionPacket, muse: Muse) {
-//kotlin	activityRef.get().receiveMuseConnectionPacket(p, muse)
+//			activityRef.get().receiveMuseConnectionPacket(p, muse)
 			activityRef.get()?.receiveMuseConnectionPacket(p, muse)
 		}
 	}
@@ -1291,12 +1311,12 @@ class MainActivity : Activity(), OnClickListener {
 	internal inner class DataListener(val activityRef: WeakReference<MainActivity>) : MuseDataListener() {
 
 		override fun receiveMuseDataPacket(p: MuseDataPacket, muse: Muse?) {
-//kotlin	activityRef.get().receiveMuseDataPacket(p, muse)
+//			activityRef.get().receiveMuseDataPacket(p, muse)
 			activityRef.get()?.receiveMuseDataPacket(p, muse)
 		}
 
 		override fun receiveMuseArtifactPacket(p: MuseArtifactPacket, muse: Muse) {
-//kotlin	activityRef.get().receiveMuseArtifactPacket(p, muse)
+//			activityRef.get().receiveMuseArtifactPacket(p, muse)
 			activityRef.get()?.receiveMuseArtifactPacket(p, muse)
 		}
 	}
@@ -1352,8 +1372,11 @@ class MainActivity : Activity(), OnClickListener {
 				Horseshoe
 		val HorseshoeElemeToneMax = 4 // since there 4 sensors here, start with "completed playing all sounds" value
 		val validSensor = booleanArrayOf(false, true, true, false)
-		val HorseshoeTones = intArrayOf(ToneGenerator.TONE_CDMA_ALERT_NETWORK_LITE, ToneGenerator.TONE_PROP_BEEP2, ToneGenerator.TONE_CDMA_ALERT_INCALL_LITE, //ToneGenerator.TONE_PROP_BEEP,
-				ToneGenerator.TONE_CDMA_ABBR_INTERCEPT)
+		val HorseshoeTones = intArrayOf(ToneGenerator.TONE_CDMA_ALERT_NETWORK_LITE,
+										ToneGenerator.TONE_PROP_BEEP2,
+										ToneGenerator.TONE_CDMA_ALERT_INCALL_LITE,
+										//ToneGenerator.TONE_PROP_BEEP,
+										ToneGenerator.TONE_CDMA_ABBR_INTERCEPT)
 	}
 	// kt:
 
