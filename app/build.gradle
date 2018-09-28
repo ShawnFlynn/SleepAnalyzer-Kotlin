@@ -23,7 +23,7 @@ android {
 }
 
 dependencies {
-    implementation 'com.android.support:support-v4:25.3.1'
+    implementation 'com.android.support:support-v4:25.+'
     implementation files('libs/libmuse_android.jar')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }

@@ -127,7 +127,7 @@ class MainActivity : Activity(), OnClickListener {
 	/**
 	 * Tag used for logging purposes.
 	 */
-	protected val TAG = javaClass.getSimpleName()
+	protected val TAG = javaClass.simpleName
 
 	// smf
 	internal var fromFile = false
@@ -534,7 +534,7 @@ class MainActivity : Activity(), OnClickListener {
 		Log.i(TAG, "ensurePermissions()")
 
 		if (ContextCompat.checkSelfPermission(this,
-						Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+						Manifest.permission.ACCESS_COARSE_LOCATION) !== PackageManager.PERMISSION_GRANTED) {
 			// We don't have the ACCESS_COARSE_LOCATION permission so create the dialogs asking
 			// the user to grant us the permission.
 
@@ -667,15 +667,15 @@ class MainActivity : Activity(), OnClickListener {
 			}
 		} else {
 			when (p.packetType()) {
-			// kt:
-			/*
+				// kt:
+				/*
 				case EEG:
 					assert(eegBuffer.length >= n);
 					getEegChannelValues(eegBuffer,p);
 					eegStale = true;
 					break;
 				*/
-			// kt:
+				// kt:
 				MuseDataPacketType.ACCELEROMETER -> {
 					assert(accelBuffer.size >= n)
 					getAccelValues(p)
@@ -686,14 +686,13 @@ class MainActivity : Activity(), OnClickListener {
 					getEegChannelValues(alphaBuffer, p)
 					alphaStale = true
 				}
-			// kt:
-			// 1.3.0 case HORSESHOE:
+				// kt:
+				// 1.3.0 case HORSESHOE:
 				MuseDataPacketType.HSI,
 				MuseDataPacketType.EEG,
 				MuseDataPacketType.ALPHA_ABSOLUTE,
 					//case ALPHA_SCORE:
-				MuseDataPacketType.
-				BETA_ABSOLUTE,
+				MuseDataPacketType.BETA_ABSOLUTE,
 					// case BETA_RELATIVE:
 					//case BETA_SCORE:
 				MuseDataPacketType.DELTA_ABSOLUTE,
@@ -707,7 +706,7 @@ class MainActivity : Activity(), OnClickListener {
 					//case THETA_SCORE:
 					// 1.3.0 handleWaivePacket(p, p.getValues());
 					handleWaivePacket(p, p.values())
-			// kt:
+				// kt:
 				MuseDataPacketType.BATTERY,
 				MuseDataPacketType.DRL_REF,
 				MuseDataPacketType.QUANTIZATION -> {
@@ -819,7 +818,7 @@ class MainActivity : Activity(), OnClickListener {
 				got_data_mask = got_data_mask or ThetaAbsolute
 			}
 
-		// 1.3.0 case HORSESHOE:
+			// 1.3.0 case HORSESHOE:
 			MuseDataPacketType.HSI -> {
 				//int helem1 = 0, helem2 = 0, helem3 = 0, helem4 = 0;
 				updateHorseshoe(data)
@@ -947,9 +946,9 @@ class MainActivity : Activity(), OnClickListener {
 			//TextView tp10 = (TextView) findViewById(R.id.eeg_tp10);
 			//tp9.setText(String.format("%6.2f", data.get(Eeg.TP9.ordinal())));
 			// 1.3.0 fp1.setText(String.format("%6.2f", data.get(Eeg.FP1.ordinal())));
-			fp1.setText(String.format("%6.2f", data[Eeg.EEG2.ordinal]))
+			fp1.text = String.format("%6.2f", data[Eeg.EEG2.ordinal])
 			// 1.3.0 fp2.setText(String.format("%6.2f", data.get(Eeg.FP2.ordinal())));
-			fp2.setText(String.format("%6.2f", data[Eeg.EEG3.ordinal]))
+			fp2.text = String.format("%6.2f", data[Eeg.EEG3.ordinal])
 			//tp10.setText(String.format("%6.2f", data.get(Eeg.TP10.ordinal())));
 		}
 	}
@@ -1023,9 +1022,9 @@ class MainActivity : Activity(), OnClickListener {
 		val acc_x = findViewById(R.id.acc_x) as TextView
 		val acc_y = findViewById(R.id.acc_y) as TextView
 		val acc_z = findViewById(R.id.acc_z) as TextView
-		acc_x.setText(String.format("%6.2f", accelBuffer[0]))
-		acc_y.setText(String.format("%6.2f", accelBuffer[1]))
-		acc_z.setText(String.format("%6.2f", accelBuffer[2]))
+		acc_x.text = String.format("%6.2f", accelBuffer[0])
+		acc_y.text = String.format("%6.2f", accelBuffer[1])
+		acc_z.text = String.format("%6.2f", accelBuffer[2])
 	}
 
 	private fun updateEeg() {
@@ -1033,21 +1032,21 @@ class MainActivity : Activity(), OnClickListener {
 		val fp1 = findViewById(R.id.eeg_af7) as TextView
 		val fp2 = findViewById(R.id.eeg_af8) as TextView
 		val tp10 = findViewById(R.id.eeg_tp10) as TextView
-		tp9.setText(String.format("%6.2f", eegBuffer[0]))
-		fp1.setText(String.format("%6.2f", eegBuffer[1]))
-		fp2.setText(String.format("%6.2f", eegBuffer[2]))
-		tp10.setText(String.format("%6.2f", eegBuffer[3]))
+		tp9.text = String.format("%6.2f", eegBuffer[0])
+		fp1.text = String.format("%6.2f", eegBuffer[1])
+		fp2.text = String.format("%6.2f", eegBuffer[2])
+		tp10.text = String.format("%6.2f", eegBuffer[3])
 	}
 
 	private fun updateAlpha() {
 		val elem1 = findViewById(R.id.elem1) as TextView
-		elem1.setText(String.format("%6.2f", alphaBuffer[0]))
+		elem1.text = String.format("%6.2f", alphaBuffer[0])
 		val elem2 = findViewById(R.id.elem2) as TextView
-		elem2.setText(String.format("%6.2f", alphaBuffer[1]))
+		elem2.text = String.format("%6.2f", alphaBuffer[1])
 		val elem3 = findViewById(R.id.elem3) as TextView
-		elem3.setText(String.format("%6.2f", alphaBuffer[2]))
+		elem3.text = String.format("%6.2f", alphaBuffer[2])
 		val elem4 = findViewById(R.id.elem4) as TextView
-		elem4.setText(String.format("%6.2f", alphaBuffer[3]))
+		elem4.text = String.format("%6.2f", alphaBuffer[3])
 	}
 
 	/**
@@ -1259,9 +1258,9 @@ class MainActivity : Activity(), OnClickListener {
 					" timestamp: " + timestamp.toString())
 
 			when (type) {
-			// EEG messages contain raw EEG data or DRL/REF data.
-			// EEG derived packets like ALPHA_RELATIVE and artifact packets
-			// are stored as MUSE_ELEMENTS messages.
+				// EEG messages contain raw EEG data or DRL/REF data.
+				// EEG derived packets like ALPHA_RELATIVE and artifact packets
+				// are stored as MUSE_ELEMENTS messages.
 				MessageType.EEG, MessageType.BATTERY, MessageType.ACCELEROMETER, MessageType.QUANTIZATION, MessageType.GYRO, MessageType.MUSE_ELEMENTS -> {
 					val packet = fileReader.dataPacket
 					Log.i(tag, "data packet: " + packet.packetType().toString())
