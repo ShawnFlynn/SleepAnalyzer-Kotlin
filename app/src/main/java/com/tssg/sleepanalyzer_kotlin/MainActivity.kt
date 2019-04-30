@@ -8,7 +8,6 @@ package com.tssg.sleepanalyzer_kotlin
 // kt:
 
 import java.io.FileWriter
-import java.io.IOException
 import java.io.PrintWriter
 // kt:
 
@@ -25,26 +24,21 @@ import java.util.concurrent.atomic.AtomicReference
 
 import com.choosemuse.example.libmuse.R
 import com.choosemuse.libmuse.Accelerometer
-import com.choosemuse.libmuse.AnnotationData
 import com.choosemuse.libmuse.ConnectionState
 import com.choosemuse.libmuse.Eeg
 import com.choosemuse.libmuse.LibmuseVersion
 import com.choosemuse.libmuse.MessageType
 import com.choosemuse.libmuse.Muse
 import com.choosemuse.libmuse.MuseArtifactPacket
-import com.choosemuse.libmuse.MuseConfiguration
 import com.choosemuse.libmuse.MuseConnectionListener
 import com.choosemuse.libmuse.MuseConnectionPacket
 import com.choosemuse.libmuse.MuseDataListener
 import com.choosemuse.libmuse.MuseDataPacket
 import com.choosemuse.libmuse.MuseDataPacketType
 import com.choosemuse.libmuse.MuseFileFactory
-import com.choosemuse.libmuse.MuseFileReader
 import com.choosemuse.libmuse.MuseFileWriter
 import com.choosemuse.libmuse.MuseListener
 import com.choosemuse.libmuse.MuseManagerAndroid
-import com.choosemuse.libmuse.MuseVersion
-import com.choosemuse.libmuse.Result
 import com.choosemuse.libmuse.ResultLevel
 
 import android.Manifest
@@ -405,7 +399,7 @@ class MainActivity : Activity(), OnClickListener {
 			// Check for faulty API
 			//	API 25 (7.1.1)
 			// has problem with this audioFeedbackThread
-			if (!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) {
+			if (!Build.VERSION.RELEASE.startsWith("7.1.")) {
 				//kt:
 				// start the audio feedback thread
 				val audioFeedbackThread = Thread(Runnable {
@@ -426,9 +420,9 @@ class MainActivity : Activity(), OnClickListener {
 		//	API 18 (4.3.1) &
 		//	API 25 (7.1.1)
 		//	have faulty Tone Generator support
-		if (!android.os.Build.VERSION.RELEASE.startsWith("4.2.") &&
-			!android.os.Build.VERSION.RELEASE.startsWith("4.3.") &&
-			!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) {
+		if (!Build.VERSION.RELEASE.startsWith("4.2.") &&
+				!Build.VERSION.RELEASE.startsWith("4.3.") &&
+				!Build.VERSION.RELEASE.startsWith("7.1.")) {
 			// kt: initial audio test
 			Log.d("Muse Headband", "sound test start")
 			stopSounds = 0
@@ -534,7 +528,7 @@ class MainActivity : Activity(), OnClickListener {
 		Log.i(TAG, "ensurePermissions()")
 
 		if (ContextCompat.checkSelfPermission(this,
-						Manifest.permission.ACCESS_COARSE_LOCATION) !== PackageManager.PERMISSION_GRANTED) {
+						Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 			// We don't have the ACCESS_COARSE_LOCATION permission so create the dialogs asking
 			// the user to grant us the permission.
 
@@ -727,8 +721,8 @@ class MainActivity : Activity(), OnClickListener {
 
 		//final ArrayList<Double> data = p.getValues();
 		val got_data = false
-//		if (pkt_timestamp == 0L || pkt_timestamp == -1) {
-		if (pkt_timestamp == 0L || pkt_timestamp.equals(-1)) {
+		//if (pkt_timestamp == 0L || pkt_timestamp == -1) {
+		if (pkt_timestamp == 0L || pkt_timestamp == -1L ) {
 			// 1.3.0 pkt_timestamp = p.getTimestamp();
 			pkt_timestamp = p.timestamp()
 			if (pkt_timestamp_ref == 0L) {
@@ -1294,7 +1288,7 @@ class MainActivity : Activity(), OnClickListener {
 	internal inner class MuseL(val activityRef: WeakReference<MainActivity>) : MuseListener() {
 
 		override fun museListChanged() {
-//			activityRef.get().museListChanged()
+			//activityRef.get().museListChanged()
 			activityRef.get()?.museListChanged()
 		}
 	}
@@ -1302,7 +1296,7 @@ class MainActivity : Activity(), OnClickListener {
 	internal inner class ConnectionListener(val activityRef: WeakReference<MainActivity>) : MuseConnectionListener() {
 
 		override fun receiveMuseConnectionPacket(p: MuseConnectionPacket, muse: Muse) {
-//			activityRef.get().receiveMuseConnectionPacket(p, muse)
+			//activityRef.get().receiveMuseConnectionPacket(p, muse)
 			activityRef.get()?.receiveMuseConnectionPacket(p, muse)
 		}
 	}
@@ -1310,12 +1304,12 @@ class MainActivity : Activity(), OnClickListener {
 	internal inner class DataListener(val activityRef: WeakReference<MainActivity>) : MuseDataListener() {
 
 		override fun receiveMuseDataPacket(p: MuseDataPacket, muse: Muse?) {
-//			activityRef.get().receiveMuseDataPacket(p, muse)
+			//activityRef.get().receiveMuseDataPacket(p, muse)
 			activityRef.get()?.receiveMuseDataPacket(p, muse)
 		}
 
 		override fun receiveMuseArtifactPacket(p: MuseArtifactPacket, muse: Muse) {
-//			activityRef.get().receiveMuseArtifactPacket(p, muse)
+			//activityRef.get().receiveMuseArtifactPacket(p, muse)
 			activityRef.get()?.receiveMuseArtifactPacket(p, muse)
 		}
 	}
@@ -1372,10 +1366,10 @@ class MainActivity : Activity(), OnClickListener {
 		val HorseshoeElemeToneMax = 4 // since there 4 sensors here, start with "completed playing all sounds" value
 		val validSensor = booleanArrayOf(false, true, true, false)
 		val HorseshoeTones = intArrayOf(ToneGenerator.TONE_CDMA_ALERT_NETWORK_LITE,
-										ToneGenerator.TONE_PROP_BEEP2,
-										ToneGenerator.TONE_CDMA_ALERT_INCALL_LITE,
-										//ToneGenerator.TONE_PROP_BEEP,
-										ToneGenerator.TONE_CDMA_ABBR_INTERCEPT)
+				ToneGenerator.TONE_PROP_BEEP2,
+				ToneGenerator.TONE_CDMA_ALERT_INCALL_LITE,
+				//ToneGenerator.TONE_PROP_BEEP,
+				ToneGenerator.TONE_CDMA_ABBR_INTERCEPT)
 	}
 	// kt:
 
