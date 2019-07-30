@@ -21,7 +21,6 @@ import java.io.File
 
 import java.util.concurrent.atomic.AtomicReference
 
-import com.choosemuse.example.libmuse.R
 import com.choosemuse.libmuse.Accelerometer
 import com.choosemuse.libmuse.ConnectionState
 import com.choosemuse.libmuse.Eeg
