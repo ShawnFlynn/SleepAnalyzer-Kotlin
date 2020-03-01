@@ -4,7 +4,6 @@
  */
 package com.tssg.sleepanalyzer-kotlin
 
-// kt:
 import java.io.FileWriter
 import java.io.IOException
 import java.io.PrintWriter
@@ -61,26 +60,6 @@ import android.support.v4.content.ContextCompat
 import android.media.ToneGenerator
 import android.media.AudioManager
 
-// kt:
-/* new stuff
-  HORSESHOE
-  ALPHA_ABSOLUTE);
-  ALPHA_SCORE);
-  BETA_ABSOLUTE);
-  BETA_RELATIVE);
-  BETA_SCORE);
-  DELTA_ABSOLUTE);
-  DELTA_RELATIVE);
-  DELTA_SCORE);
-  GAMMA_ABSOLUTE);
-  GAMMA_RELATIVE);
-  GAMMA_SCORE);
-  THETA_ABSOLUTE);
-  THETA_RELATIVE);
-  THETA_SCORE);
-*/
-// does not exist : import java.awt.Toolkit;
-// kt:
 /**
  * This example will illustrate how to connect to a Muse headband,
  * register for and receive EEG data and disconnect from the headband.
@@ -104,24 +83,29 @@ import android.media.AudioManager
  * 7. You can pause/resume data transmission with the button at the bottom of the screen.
  * 8. To disconnect from the headband, press "Disconnect"
  */
-class MainActivity1 : Activity(), OnClickListener {
+
+class MainActivity : Activity(), OnClickListener {
+//class MainActivity : Activity(), OnClickListener {
 	/**
 	 * Tag used for logging purposes.
 	 */
 	protected val TAG: String? = getClass().getSimpleName()
-	// smf
+
 	var fromFile = false
+
 	/**
 	 * The MuseManager is how you detect Muse headbands and receive notifications
 	 * when the list of available headbands changes.
 	 */
 	private var manager: MuseManagerAndroid? = null
+
 	/**
 	 * A Muse refers to a Muse headband.  Use this to connect/disconnect from the
 	 * headband, register listeners to receive EEG data and get headband
 	 * configuration and version information.
 	 */
 	private var muse: Muse? = null
+
 	/**
 	 * The ConnectionListener will be notified whenever there is a change in
 	 * the connection state of a headband, for example when the headband connects
@@ -132,6 +116,7 @@ class MainActivity1 : Activity(), OnClickListener {
 	 * that extends MuseConnectionListener.
 	 */
 	private var connectionListener: ConnectionListener? = null
+
 	/**
 	 * The DataListener is how you will receive EEG (and other) data from the
 	 * headband.
@@ -141,6 +126,7 @@ class MainActivity1 : Activity(), OnClickListener {
 	 * that extends MuseDataListener.
 	 */
 	private var dataListener: DataListener? = null
+
 	/**
 	 * Data comes in from the headband at a very fast rate; 220Hz, 256Hz or 500Hz,
 	 * depending on the type of headband and the preset configuration.  We buffer the
@@ -162,6 +148,7 @@ class MainActivity1 : Activity(), OnClickListener {
 	private var alphaStale = false
 	private val accelBuffer: DoubleArray? = DoubleArray(3)
 	private var accelStale = false
+
 	/**
 	 * We will be updating the UI using a handler instead of in packet handlers because
 	 * packets come in at a very high frequency and it only makes sense to update the UI
@@ -169,31 +156,37 @@ class MainActivity1 : Activity(), OnClickListener {
 	 * footprint and makes GC pauses less frequent/noticeable.
 	 */
 	private val handler: Handler? = Handler()
+
 	/**
 	 * In the UI, the list of Muses you can connect to is displayed in a Spinner object for this example.
 	 * This spinner adapter contains the MAC addresses of all of the headbands we have discovered.
 	 */
 	private var spinnerAdapter: ArrayAdapter<String?>? = null
+
 	/**
 	 * It is possible to pause the data transmission from the headband.  This boolean tracks whether
 	 * or not the data transmission is enabled as we allow the user to pause transmission in the UI.
 	 */
 	private var dataTransmission = true
+
 	/**
 	 * To save data to a file, you should use a MuseFileWriter.  The MuseFileWriter knows how to
 	 * serialize the data packets received from the headband into a compact binary format.
 	 * To read the file back, you would use a MuseFileReader.
 	 */
 	private val fileWriter: AtomicReference<MuseFileWriter?>? = AtomicReference()
+
 	// kt:
 	private val writeData: FileWriter? = null
 	private val print_line: PrintWriter? = null
 	// kt:
+
 	/**
 	 * We don't want file operations to slow down the UI, so we will defer those file operations
 	 * to a handler on a separate thread.
 	 */
 	private val fileHandler: AtomicReference<Handler?>? = AtomicReference()
+
 	// kt:
 	var waive_pkt_cnt = 0
 	var data_set_cnt = 0
@@ -216,15 +209,16 @@ class MainActivity1 : Activity(), OnClickListener {
 	var horseshoeElemeTone = 0
 	var stopSounds = 0
 	// kt:
-//--------------------------------------
-// Lifecycle / Connection code
+
+	//--------------------------------------
+	// Lifecycle / Connection code
 	@Override
 	protected fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		val method = "onCreate()"
 		Log.i(TAG, method)
 		// We need to set the context on MuseManagerAndroid before we can do anything.
-// This must come before other LibMuse API calls as it also loads the library.
+		// This must come before other LibMuse API calls as it also loads the library.
 		manager = MuseManagerAndroid.getInstance()
 		manager.setContext(this)
 		Log.d(TAG, "LibMuse version=" + LibmuseVersion.instance().getString())
@@ -234,22 +228,22 @@ class MainActivity1 : Activity(), OnClickListener {
 		// Register a listener to receive data from a Muse.
 		dataListener = DataListener(weakActivity)
 		// Register a listener to receive notifications of what Muse headbands
-// we can connect to.
+		// we can connect to.
 		manager.setMuseListener(MuseL(weakActivity))
 		// Muse 2016 (MU-02) headbands use Bluetooth Low Energy technology to
-// simplify the connection process.  This requires access to the COARSE_LOCATION
-// or FINE_LOCATION permissions.  Make sure we have these permissions before
-// proceeding.
+		// simplify the connection process.  This requires access to the COARSE_LOCATION
+		// or FINE_LOCATION permissions.  Make sure we have these permissions before
+		// proceeding.
 		ensurePermissions()
 		// Load and initialize our UI.
 		initUI()
 		// Start up a thread for asynchronous file operations.
-// This is only needed if you want to do File I/O.
+		// This is only needed if you want to do File I/O.
 		fileThread.start()
 		// Start our asynchronous updates of the UI.
 		handler.post(tickUi)
 		// RB
-// Get the external storage state
+		// Get the external storage state
 		val state: String = Environment.getExternalStorageState()
 		// Storage Directory
 		var fileDir: File? = null
@@ -286,12 +280,11 @@ class MainActivity1 : Activity(), OnClickListener {
 			playFileThread.start()
 		} else {
 			Log.w(method, "test file doesn't exist")
-			// TODO
-// Check for faulty API
-//	API 25 (7.1.1)
-// has problem with this audioFeedbackThread
+			// Check for faulty API
+			//	API 25 (7.1.1)
+			// has problem with this audioFeedbackThread
 			if (!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) { //kt:
-// start the audio feedback thread
+			// start the audio feedback thread
 				val audioFeedbackThread = Thread(object : Runnable() {
 					fun run() {
 						stopSounds = 0
@@ -300,16 +293,13 @@ class MainActivity1 : Activity(), OnClickListener {
 				})
 				audioFeedbackThread.setName("Audio Feedback")
 				audioFeedbackThread.start()
-				// kt:
 			}
 		}
-		// RB
-// TODO
-// Check for faulty APIs
-//	API 17 (4.2.2) &
-//	API 18 (4.3.1) &
-//	API 25 (7.1.1)
-//	have faulty Tone Generator support
+		// Check for faulty APIs
+		//	API 17 (4.2.2) &
+		//	API 18 (4.3.1) &
+		//	API 25 (7.1.1)
+		//	have faulty Tone Generator support
 		if (!android.os.Build.VERSION.RELEASE.startsWith("4.2.") &&
 				!android.os.Build.VERSION.RELEASE.startsWith("4.3.") &&
 				!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) { // kt: initial audio test
@@ -324,7 +314,7 @@ class MainActivity1 : Activity(), OnClickListener {
 	protected fun onPause() {
 		super.onPause()
 		// It is important to call stopListening when the Activity is paused
-// to avoid a resource leak from the LibMuse library.
+		// to avoid a resource leak from the LibMuse library.
 		manager.stopListening()
 	}
 
@@ -335,15 +325,15 @@ class MainActivity1 : Activity(), OnClickListener {
 	fun onClick(v: View?) {
 		Log.i(TAG, "onClick()")
 		if (v.getId() === R.id.refresh) { // The user has pressed the "Refresh" button.
-// Start listening for nearby or paired Muse headbands. We call stopListening
-// first to make sure startListening will clear the list of headbands and start fresh.
+			// Start listening for nearby or paired Muse headbands. We call stopListening
+			// first to make sure startListening will clear the list of headbands and start fresh.
 			manager.stopListening()
 			manager.startListening()
 		} else if (v.getId() === R.id.connect) { // The user has pressed the "Connect" button to connect to
-// the headband in the spinner.
-// Listening is an expensive operation, so now that we know
-// which headband the user wants to connect to we can stop
-// listening for other headbands.
+			// the headband in the spinner.
+			// Listening is an expensive operation, so now that we know
+			// which headband the user wants to connect to we can stop
+			// listening for other headbands.
 			manager.stopListening()
 			val availableMuses: List<Muse?> = manager.getMuses()
 			val musesSpinner: Spinner? = findViewById(R.id.muses_spinner) as Spinner?
@@ -353,9 +343,9 @@ class MainActivity1 : Activity(), OnClickListener {
 			} else { // Cache the Muse that the user has selected.
 				muse = availableMuses[musesSpinner.getSelectedItemPosition()]
 				// Unregister all prior listeners and register our data listener to
-// receive the MuseDataPacketTypes we are interested in.  If you do
-// not register a listener for a particular data type, you will not
-// receive data packets of that type.
+				// receive the MuseDataPacketTypes we are interested in.  If you do
+				// not register a listener for a particular data type, you will not
+				// receive data packets of that type.
 				muse.unregisterAllListeners()
 				muse.registerConnectionListener(connectionListener)
 				muse.registerDataListener(dataListener, MuseDataPacketType.EEG)
@@ -368,21 +358,22 @@ class MainActivity1 : Activity(), OnClickListener {
 				muse.runAsynchronously()
 			}
 		} else if (v.getId() === R.id.disconnect) { // The user has pressed the "Disconnect" button.
-// Disconnect from the selected Muse.
+				// Disconnect from the selected Muse.
 			if (muse != null) {
 				muse.disconnect()
 			}
 		} else if (v.getId() === R.id.pause) { // The user has pressed the "Pause/Resume" button to either pause or
-// resume data transmission.  Toggle the state and pause or resume the
-// transmission on the headband.
+				// resume data transmission.  Toggle the state and pause or resume the
+				// transmission on the headband.
 			if (muse != null) {
 				dataTransmission = !dataTransmission
 				muse.enableDataTransmission(dataTransmission)
 			}
 		}
 	}
+
 	//--------------------------------------
-// Permissions
+	// Permissions
 	/**
 	 * The ACCESS_COARSE_LOCATION permission is required to use the
 	 * Bluetooth Low Energy library and must be requested at runtime for Android 6.0+
@@ -399,7 +390,7 @@ class MainActivity1 : Activity(), OnClickListener {
 		Log.i(TAG, "ensurePermissions()")
 		if (ContextCompat.checkSelfPermission(this,
 						Manifest.permission.ACCESS_COARSE_LOCATION) !== PackageManager.PERMISSION_GRANTED) { // We don't have the ACCESS_COARSE_LOCATION permission so create the dialogs asking
-// the user to grant us the permission.
+			// the user to grant us the permission.
 			val buttonListener: DialogInterface.OnClickListener = object : OnClickListener() {
 				fun onClick(dialog: DialogInterface?, which: Int) {
 					dialog.dismiss()
@@ -408,9 +399,9 @@ class MainActivity1 : Activity(), OnClickListener {
 				}
 			}
 			// This is the context dialog which explains to the user the reason we are requesting
-// this permission.  When the user presses the positive (I Understand) button, the
-// standard Android permission dialog will be displayed (as defined in the button
-// listener above).
+			// this permission.  When the user presses the positive (I Understand) button, the
+			// standard Android permission dialog will be displayed (as defined in the button
+			// listener above).
 			val introDialog: AlertDialog = Builder(this)
 					.setTitle(R.string.permission_dialog_title)
 					.setMessage(R.string.permission_dialog_description)
@@ -419,8 +410,9 @@ class MainActivity1 : Activity(), OnClickListener {
 			introDialog.show()
 		}
 	}
+
 	//--------------------------------------
-// Listeners
+	// Listeners
 	/**
 	 * You will receive a callback to this method each time a headband is discovered.
 	 * In this example, we update the spinner with the MAC address of the headband.
@@ -447,11 +439,11 @@ class MainActivity1 : Activity(), OnClickListener {
 		val status: String = p.getPreviousConnectionState().toString() + " -> " + current
 		Log.d(TAG, status)
 		// kt:
-// 1.3.0 final String full = "Muse " + p.getSource().getMacAddress() +" " + status;
+		// 1.3.0 final String full = "Muse " + p.getSource().getMacAddress() +" " + status;
 		val full = "Muse " + muse.getMacAddress().toString() + " " + status
 		Log.d("Muse Headband kt", full)
 		// kt:
-// Update the UI with the change in connection state.
+		// Update the UI with the change in connection state.
 		handler.post(object : Runnable() {
 			@Override
 			fun run() {
@@ -460,8 +452,8 @@ class MainActivity1 : Activity(), OnClickListener {
 				val museVersion: MuseVersion = muse.getMuseVersion()
 				val museVersionText: TextView? = findViewById(R.id.version) as TextView?
 				// If we haven't yet connected to the headband, the version information
-// will be null.  You have to connect to the headband before either the
-// MuseVersion or MuseConfiguration information is known.
+				// will be null.  You have to connect to the headband before either the
+				// MuseVersion or MuseConfiguration information is known.
 				if (museVersion != null) {
 					val version: String = (museVersion.getFirmwareType().toString() + " - "
 							+ museVersion.getFirmwareVersion() + " - "
@@ -528,8 +520,8 @@ class MainActivity1 : Activity(), OnClickListener {
 					alphaStale = true
 				}
 				HSI, EEG, ALPHA_ABSOLUTE, BETA_ABSOLUTE, DELTA_ABSOLUTE, GAMMA_ABSOLUTE, THETA_ABSOLUTE ->  //case THETA_RELATIVE:
-//case THETA_SCORE:
-// 1.3.0 handleWaivePacket(p, p.getValues());
+																											//case THETA_SCORE:
+					// 1.3.0 handleWaivePacket(p, p.getValues());
 					handleWaivePacket(p, p.values())
 				BATTERY, DRL_REF, QUANTIZATION -> {
 				}
@@ -647,6 +639,7 @@ class MainActivity1 : Activity(), OnClickListener {
 				Log.i("kt: hrs data ", Integer.toString(waive_pkt_cnt))
 			}
 		}
+
 		// write/append data to file
 		if (got_data_mask == AllDataMask) {
 			val cur_tstamp = tstamp - data_time_stamp_ref
@@ -662,8 +655,8 @@ class MainActivity1 : Activity(), OnClickListener {
 			pkt_timestamp = 0 // for the next time
 			waive_pkt_cnt++ // for debug
 			//if(waive_pkt_cnt == 5) //for debug
-//    waive_pkt_cnt = 0;
-//if(elem1!= 0 && elem2!=0 && elem3!=0 && elem4!=0)
+			//    waive_pkt_cnt = 0;
+			//if(elem1!= 0 && elem2!=0 && elem3!=0 && elem4!=0)
 			run {
 				print_line.printf(strData)
 				got_data_mask = 0
@@ -683,20 +676,19 @@ class MainActivity1 : Activity(), OnClickListener {
 	}
 
 	// kt:
-// kt:
 	private fun updateHorseshoe(data: ArrayList<Double?>?) { //Activity activity = activityRef.get();
 		val activity: Activity? = this.getApplicationContext() as Activity?
 		if (activity != null) {
 			activity.runOnUiThread(object : Runnable() {
 				@Override
 				fun run() { //TextView tp9 = (TextView) findViewById(R.id.eeg_tp9);
-// 1.3.0 TextView fp1 = (TextView) findViewById(R.id.eeg_fp1);
+					// 1.3.0 TextView fp1 = (TextView) findViewById(R.id.eeg_fp1);
 					val fp1: TextView? = findViewById(R.id.eeg_af7) as TextView?
 					// 1.3.0 TextView fp2 = (TextView) findViewById(R.id.eeg_fp2);
 					val fp2: TextView? = findViewById(R.id.eeg_af8) as TextView?
 					//TextView tp10 = (TextView) findViewById(R.id.eeg_tp10);
-//tp9.setText(String.format("%6.2f", data.get(Eeg.TP9.ordinal())));
-// 1.3.0 fp1.setText(String.format("%6.2f", data.get(Eeg.FP1.ordinal())));
+					//tp9.setText(String.format("%6.2f", data.get(Eeg.TP9.ordinal())));
+					// 1.3.0 fp1.setText(String.format("%6.2f", data.get(Eeg.FP1.ordinal())));
 					fp1.setText(String.format("%6.2f", data.get(Eeg.EEG2.ordinal())))
 					// 1.3.0 fp2.setText(String.format("%6.2f", data.get(Eeg.FP2.ordinal())));
 					fp2.setText(String.format("%6.2f", data.get(Eeg.EEG3.ordinal())))
@@ -706,6 +698,7 @@ class MainActivity1 : Activity(), OnClickListener {
 		}
 	}
 	// kt:
+
 	/**
 	 * You will receive a callback to this method each time an artifact packet is generated if you
 	 * have registered for the ARTIFACTS data type.  MuseArtifactPackets are generated when
@@ -741,8 +734,9 @@ class MainActivity1 : Activity(), OnClickListener {
 		accelBuffer[1] = p.getAccelerometerValue(Accelerometer.Y)
 		accelBuffer[2] = p.getAccelerometerValue(Accelerometer.Z)
 	}
+
 	//--------------------------------------
-// UI Specific methods
+	// UI Specific methods
 	/**
 	 * Initializes the UI of the example application.
 	 */
@@ -821,8 +815,9 @@ class MainActivity1 : Activity(), OnClickListener {
 		val elem4: TextView? = findViewById(R.id.elem4) as TextView?
 		elem4.setText(String.format("%6.2f", alphaBuffer!![3]))
 	}
+
 	//--------------------------------------
-// File I/O
+	// File I/O
 	/**
 	 * We don't want to block the UI thread while we write to a file, so the file
 	 * writing is moved to a separate thread.
@@ -835,8 +830,8 @@ class MainActivity1 : Activity(), OnClickListener {
 			val dir: File = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
 			val file = File(dir, "new_muse_file.muse")
 			// MuseFileWriter will append to an existing file.
-// In this case, we want to start fresh so the file
-// if it exists.
+			// In this case, we want to start fresh so the file
+			// if it exists.
 			if (file.exists()) {
 				file.delete()
 			}
@@ -875,9 +870,9 @@ class MainActivity1 : Activity(), OnClickListener {
 				fun run() {
 					val w: MuseFileWriter = fileWriter.get()
 					// Annotation strings can be added to the file to
-// give context as to what is happening at that point in
-// time.  An annotation can be an arbitrary string or
-// may include additional AnnotationData.
+					// give context as to what is happening at that point in
+					// time.  An annotation can be an arbitrary string or
+					// may include additional AnnotationData.
 					w.addAnnotationString(0, "Disconnected")
 					w.flush()
 					w.close()
@@ -907,7 +902,7 @@ class MainActivity1 : Activity(), OnClickListener {
 			return  // test done
 		}
 		// end tone test
-// normal operation
+		// normal operation
 		Log.i("Muse Headband kt:", "Starting ToneGenerator")
 		var toneG: ToneGenerator? = ToneGenerator(AudioManager.STREAM_ALARM, 100)
 		// infinite - user can connect/disconnect multiple times without exiting the app
@@ -917,7 +912,7 @@ class MainActivity1 : Activity(), OnClickListener {
 				toneG = null
 				Log.i("Muse Headband kt:", "Stopping ToneGenerator")
 				//stopSounds = 0;
-// put thread to sleep
+				// put thread to sleep
 				try {
 					Thread.sleep(1000) //let CPU rest
 				} catch (e: Exception) {
@@ -928,13 +923,13 @@ class MainActivity1 : Activity(), OnClickListener {
 				i = horseshoeElemeTone
 			}
 			// do not play sounds if horseshoe is less than 3
-// look for horseshoe less than 3
+			// look for horseshoe less than 3
 			while (horseshoeElem!![i] < 3) {
 				i++
 				if (i == HorseshoeElemeToneMax) break
 			}
 			// we are here either becasue we scanned to the end of the array
-// or we found a bad sensor
+			// or we found a bad sensor
 			if (i != HorseshoeElemeToneMax) // if none bad, no sound
 			{ // we had bad sensor, play its sound
 				musePlayTone(toneG, i)
@@ -949,8 +944,7 @@ class MainActivity1 : Activity(), OnClickListener {
 		} // infinite loop
 	}
 
-	// kt:
-// smf
+	// smf
 	private fun playMuseFile(fileName: File?) {
 		val tag = "playMuseFile()"
 		if (!fileName.exists()) {
@@ -983,9 +977,9 @@ class MainActivity1 : Activity(), OnClickListener {
 					Log.d(tag, "version $version")
 					val activity: Activity = dataListener!!.activityRef.get()
 					// UI thread is used here only because we need to update
-// TextView values. You don't have to use another thread, unless
-// you want to run disconnect() or connect() from connection packet
-// handler. In this case creating another thread is required.
+					// TextView values. You don't have to use another thread, unless
+					// you want to run disconnect() or connect() from connection packet
+					// handler. In this case creating another thread is required.
 					if (activity != null) {
 						activity.runOnUiThread(object : Runnable() {
 							@Override
@@ -1016,6 +1010,7 @@ class MainActivity1 : Activity(), OnClickListener {
 		}
 	}
 	// smf
+
 	/**
 	 * Reads the provided .muse file and prints the data to the logcat.
 	 *
@@ -1035,7 +1030,7 @@ class MainActivity1 : Activity(), OnClickListener {
 		// Define a file reader
 		val fileReader: MuseFileReader = MuseFileFactory.getMuseFileReader(file)
 		// Loop through each message in the file.  gotoNextMessage will read the next message
-// and return the result of the read operation as a Result.
+		// and return the result of the read operation as a Result.
 		var res: Result = fileReader.gotoNextMessage()
 		while (res.getLevel() === ResultLevel.R_INFO && !res.getInfo().contains("EOF")) {
 			val type: MessageType = fileReader.getMessageType()
@@ -1070,10 +1065,10 @@ class MainActivity1 : Activity(), OnClickListener {
 	}
 
 	//--------------------------------------
-// Listener translators
-//
-// Each of these classes extend from the appropriate listener and contain a weak reference
-// to the activity.  Each class simply forwards the messages it receives back to the Activity.
+	// Listener translators
+	//
+	// Each of these classes extend from the appropriate listener and contain a weak reference
+	// to the activity.  Each class simply forwards the messages it receives back to the Activity.
 	internal inner class MuseL(activityRef: WeakReference<MainActivity1?>?) : MuseListener() {
 		val activityRef: WeakReference<MainActivity1?>?
 		@Override
@@ -1143,7 +1138,7 @@ class MainActivity1 : Activity(), OnClickListener {
 
 	companion object {
 		//int artifactsElem = 0;
-// bit masks for packet types:
+		// bit masks for packet types:
 		const val AlphaAbsolute = 1
 		const val BetaAbsolute = 2
 		const val DeltaAbsolute = 4
