@@ -1,17 +1,18 @@
-/**
+/*
  * Example of using libmuse library on android.
  * Interaxon, Inc. 2016
  */
-package com.tssg.sleepanalyzer-kotlin
+
+package com.tssg.sleepanalyzer_kotlin
 
 import java.io.FileWriter
-import java.io.IOException
 import java.io.PrintWriter
 import java.lang.ref.WeakReference
 import java.util.ArrayList
 import java.util.List
 import java.util.Calendar
 import java.io.File
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 import com.choosemuse.example.libmuse.R
 import com.choosemuse.libmuse.Accelerometer
@@ -39,10 +40,10 @@ import com.choosemuse.libmuse.ResultLevel
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.bluetooth.BluetoothAdapter
 import android.graphics.Typeface
 import android.content.DialogInterface
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Looper
@@ -54,11 +55,31 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
 import android.widget.TextView
-import android.bluetooth.BluetoothAdapter
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.media.ToneGenerator
 import android.media.AudioManager
+import java.util.Locale.*
+
+// kt:
+/* new stuff
+  HORSESHOE
+  ALPHA_ABSOLUTE);
+  ALPHA_SCORE);
+  BETA_ABSOLUTE);
+  BETA_RELATIVE);
+  BETA_SCORE);
+  DELTA_ABSOLUTE);
+  DELTA_RELATIVE);
+  DELTA_SCORE);
+  GAMMA_ABSOLUTE);
+  GAMMA_RELATIVE);
+  GAMMA_SCORE);
+  THETA_ABSOLUTE);
+  THETA_RELATIVE);
+  THETA_SCORE);
+*/
+// kt:
 
 /**
  * This example will illustrate how to connect to a Muse headband,
@@ -83,14 +104,13 @@ import android.media.AudioManager
  * 7. You can pause/resume data transmission with the button at the bottom of the screen.
  * 8. To disconnect from the headband, press "Disconnect"
  */
-
-class MainActivity : Activity(), OnClickListener {
-//class MainActivity : Activity(), OnClickListener {
+public class MainActivity : Activity(), OnClickListener {
 	/**
 	 * Tag used for logging purposes.
 	 */
 	protected val TAG: String? = getClass().getSimpleName()
 
+	// smf
 	var fromFile = false
 
 	/**
@@ -180,7 +200,6 @@ class MainActivity : Activity(), OnClickListener {
 	private val writeData: FileWriter? = null
 	private val print_line: PrintWriter? = null
 	// kt:
-
 	/**
 	 * We don't want file operations to slow down the UI, so we will defer those file operations
 	 * to a handler on a separate thread.
@@ -190,7 +209,6 @@ class MainActivity : Activity(), OnClickListener {
 	// kt:
 	var waive_pkt_cnt = 0
 	var data_set_cnt = 0
-	var data_time_stamp: Long = 0
 	var data_time_stamp_ref: Long = 0
 	var pkt_timestamp: Long = 0
 	var pkt_timestamp_ref: Long = 0
@@ -201,14 +219,13 @@ class MainActivity : Activity(), OnClickListener {
 	var gammaAbsoluteElem: DoubleArray? = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
 	var thetaAbsoluteElem: DoubleArray? = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
 	var horseshoeElem: IntArray? = intArrayOf(0, 0, 0, 0)
-	// | Artifacts;
 	var got_data_mask = 0
+
 	// sound stuff
 	var tone_on_duration = 4000
 	var tone_off_duration = 3000
 	var horseshoeElemeTone = 0
 	var stopSounds = 0
-	// kt:
 
 	//--------------------------------------
 	// Lifecycle / Connection code
@@ -217,12 +234,14 @@ class MainActivity : Activity(), OnClickListener {
 		super.onCreate(savedInstanceState)
 		val method = "onCreate()"
 		Log.i(TAG, method)
+
 		// We need to set the context on MuseManagerAndroid before we can do anything.
 		// This must come before other LibMuse API calls as it also loads the library.
 		manager = MuseManagerAndroid.getInstance()
 		manager.setContext(this)
 		Log.d(TAG, "LibMuse version=" + LibmuseVersion.instance().getString())
-		val weakActivity: WeakReference<MainActivity1?> = WeakReference<MainActivity1?>(this)
+		val weakActivity: WeakReference<MainActivity?> = WeakReference(this)
+
 		// Register a listener to receive connection state changes.
 		connectionListener = ConnectionListener(weakActivity)
 		// Register a listener to receive data from a Muse.
@@ -230,46 +249,58 @@ class MainActivity : Activity(), OnClickListener {
 		// Register a listener to receive notifications of what Muse headbands
 		// we can connect to.
 		manager.setMuseListener(MuseL(weakActivity))
+
 		// Muse 2016 (MU-02) headbands use Bluetooth Low Energy technology to
 		// simplify the connection process.  This requires access to the COARSE_LOCATION
 		// or FINE_LOCATION permissions.  Make sure we have these permissions before
 		// proceeding.
 		ensurePermissions()
+
 		// Load and initialize our UI.
 		initUI()
+
 		// Start up a thread for asynchronous file operations.
 		// This is only needed if you want to do File I/O.
 		fileThread.start()
+
 		// Start our asynchronous updates of the UI.
 		handler.post(tickUi)
+
 		// RB
 		// Get the external storage state
 		val state: String = Environment.getExternalStorageState()
+
 		// Storage Directory
-		var fileDir: File? = null
+		val fileDir: File?
+
 		// External vs. Local storage
 		if (Environment.MEDIA_MOUNTED.equals(state)) // Get the external storage "/Download" directory path
 			fileDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) else  // Get the local storage directory path
 			fileDir = Environment.getDataDirectory()
+
 		// Construct the test file path
 		val sourceFile = File(fileDir, "test_muse_file.muse")
+
 		// Check if the file exists
-		if (sourceFile.exists()) { // Get the test file name
+		if (sourceFile.exists()) {
+
+			// Get the test file name
 			val sourceFileName: String = sourceFile.getName()
 			Log.w(method, "playing test file: $sourceFileName")
+
 			// Set the flag
 			fromFile = true
 			val statusText: TextView? = findViewById(R.id.con_status) as TextView?
-			statusText.setText("Reading from test file — "
-					+ sourceFileName +
-					"\nMuse headband connections are disabled!\n")
+			statusText.setText("""Reading from test file — $sourceFileName Muse headband connections are disabled!""".trimIndent())
 			statusText.setTypeface(null, Typeface.BOLD_ITALIC)
+
 			// Disable the buttons and spinner when reading from a file
 			findViewById(R.id.refresh).setEnabled(false)
 			findViewById(R.id.connect).setEnabled(false)
 			findViewById(R.id.disconnect).setEnabled(false)
 			findViewById(R.id.pause).setEnabled(false)
 			findViewById(R.id.muses_spinner).setEnabled(false)
+
 			// file can be big, read it in a separate thread
 			val playFileThread = Thread(object : Runnable() {
 				fun run() {
@@ -280,11 +311,18 @@ class MainActivity : Activity(), OnClickListener {
 			playFileThread.start()
 		} else {
 			Log.w(method, "test file doesn't exist")
+
 			// Check for faulty API
+			//	API 17 (4.2.2) &
+			//	API 18 (4.3.1) &
 			//	API 25 (7.1.1)
 			// has problem with this audioFeedbackThread
-			if (!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) { //kt:
-			// start the audio feedback thread
+			if (!android.os.Build.VERSION.RELEASE.startsWith("4.2.") &&
+					!android.os.Build.VERSION.RELEASE.startsWith("4.3.") &&
+					!android.os.Build.VERSION.RELEASE.startsWith("5.1.") &&
+					!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) {
+				//kt:
+				// start the audio feedback thread
 				val audioFeedbackThread = Thread(object : Runnable() {
 					fun run() {
 						stopSounds = 0
@@ -293,8 +331,11 @@ class MainActivity : Activity(), OnClickListener {
 				})
 				audioFeedbackThread.setName("Audio Feedback")
 				audioFeedbackThread.start()
+				// kt:
 			}
 		}
+		// RB
+
 		// Check for faulty APIs
 		//	API 17 (4.2.2) &
 		//	API 18 (4.3.1) &
@@ -302,7 +343,9 @@ class MainActivity : Activity(), OnClickListener {
 		//	have faulty Tone Generator support
 		if (!android.os.Build.VERSION.RELEASE.startsWith("4.2.") &&
 				!android.os.Build.VERSION.RELEASE.startsWith("4.3.") &&
-				!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) { // kt: initial audio test
+				!android.os.Build.VERSION.RELEASE.startsWith("5.1.") &&
+				!android.os.Build.VERSION.RELEASE.startsWith("7.1.")) {
+			// kt: initial audio test
 			Log.d("Muse Headband", "sound test start")
 			stopSounds = 0
 			playAudioFeedback(1)
@@ -324,23 +367,30 @@ class MainActivity : Activity(), OnClickListener {
 	@Override
 	fun onClick(v: View?) {
 		Log.i(TAG, "onClick()")
-		if (v.getId() === R.id.refresh) { // The user has pressed the "Refresh" button.
+		if (v.getId() === R.id.refresh) {
+			// The user has pressed the "Refresh" button.
 			// Start listening for nearby or paired Muse headbands. We call stopListening
 			// first to make sure startListening will clear the list of headbands and start fresh.
 			manager.stopListening()
 			manager.startListening()
-		} else if (v.getId() === R.id.connect) { // The user has pressed the "Connect" button to connect to
+		} else if (v.getId() === R.id.connect) {
+
+			// The user has pressed the "Connect" button to connect to
 			// the headband in the spinner.
+
 			// Listening is an expensive operation, so now that we know
 			// which headband the user wants to connect to we can stop
 			// listening for other headbands.
 			manager.stopListening()
 			val availableMuses: List<Muse?> = manager.getMuses()
 			val musesSpinner: Spinner? = findViewById(R.id.muses_spinner) as Spinner?
+
 			// Check that we actually have something to connect to.
 			if (availableMuses.size() < 1 || musesSpinner.getAdapter().getCount() < 1) {
 				Log.d(TAG, "There is nothing to connect to")
-			} else { // Cache the Muse that the user has selected.
+			} else {
+
+				// Cache the Muse that the user has selected.
 				muse = availableMuses[musesSpinner.getSelectedItemPosition()]
 				// Unregister all prior listeners and register our data listener to
 				// receive the MuseDataPacketTypes we are interested in.  If you do
@@ -354,24 +404,28 @@ class MainActivity : Activity(), OnClickListener {
 				muse.registerDataListener(dataListener, MuseDataPacketType.BATTERY)
 				muse.registerDataListener(dataListener, MuseDataPacketType.DRL_REF)
 				muse.registerDataListener(dataListener, MuseDataPacketType.QUANTIZATION)
+
 				// Initiate a connection to the headband and stream the data asynchronously.
 				muse.runAsynchronously()
 			}
-		} else if (v.getId() === R.id.disconnect) { // The user has pressed the "Disconnect" button.
-				// Disconnect from the selected Muse.
+		} else if (v.getId() === R.id.disconnect) {
+
+			// The user has pressed the "Disconnect" button.
+			// Disconnect from the selected Muse.
 			if (muse != null) {
 				muse.disconnect()
 			}
-		} else if (v.getId() === R.id.pause) { // The user has pressed the "Pause/Resume" button to either pause or
-				// resume data transmission.  Toggle the state and pause or resume the
-				// transmission on the headband.
+		} else if (v.getId() === R.id.pause) {
+
+			// The user has pressed the "Pause/Resume" button to either pause or
+			// resume data transmission.  Toggle the state and pause or resume the
+			// transmission on the headband.
 			if (muse != null) {
 				dataTransmission = !dataTransmission
 				muse.enableDataTransmission(dataTransmission)
 			}
 		}
 	}
-
 	//--------------------------------------
 	// Permissions
 	/**
@@ -389,15 +443,17 @@ class MainActivity : Activity(), OnClickListener {
 	private fun ensurePermissions() {
 		Log.i(TAG, "ensurePermissions()")
 		if (ContextCompat.checkSelfPermission(this,
-						Manifest.permission.ACCESS_COARSE_LOCATION) !== PackageManager.PERMISSION_GRANTED) { // We don't have the ACCESS_COARSE_LOCATION permission so create the dialogs asking
+						Manifest.permission.ACCESS_COARSE_LOCATION) !== PackageManager.PERMISSION_GRANTED) {
+			// We don't have the ACCESS_COARSE_LOCATION permission so create the dialogs asking
 			// the user to grant us the permission.
 			val buttonListener: DialogInterface.OnClickListener = object : OnClickListener() {
 				fun onClick(dialog: DialogInterface?, which: Int) {
 					dialog.dismiss()
-					ActivityCompat.requestPermissions(this@MainActivity1, arrayOf<String?>(Manifest.permission.ACCESS_COARSE_LOCATION),
+					ActivityCompat.requestPermissions(this@MainActivity, arrayOf<String?>(Manifest.permission.ACCESS_COARSE_LOCATION),
 							0)
 				}
 			}
+
 			// This is the context dialog which explains to the user the reason we are requesting
 			// this permission.  When the user presses the positive (I Understand) button, the
 			// standard Android permission dialog will be displayed (as defined in the button
@@ -410,7 +466,6 @@ class MainActivity : Activity(), OnClickListener {
 			introDialog.show()
 		}
 	}
-
 	//--------------------------------------
 	// Listeners
 	/**
@@ -435,14 +490,17 @@ class MainActivity : Activity(), OnClickListener {
 	fun receiveMuseConnectionPacket(p: MuseConnectionPacket?, muse: Muse?) {
 		Log.i(TAG, "receiveMuseConnectionPacket()")
 		val current: ConnectionState = p.getCurrentConnectionState()
+
 		// Format a message to show the change of connection state in the UI.
 		val status: String = p.getPreviousConnectionState().toString() + " -> " + current
 		Log.d(TAG, status)
+
 		// kt:
 		// 1.3.0 final String full = "Muse " + p.getSource().getMacAddress() +" " + status;
 		val full = "Muse " + muse.getMacAddress().toString() + " " + status
 		Log.d("Muse Headband kt", full)
 		// kt:
+
 		// Update the UI with the change in connection state.
 		handler.post(object : Runnable() {
 			@Override
@@ -479,26 +537,26 @@ class MainActivity : Activity(), OnClickListener {
 	 * a single listener for all packet types as we have done here.
 	 *
 	 * @param p    The data packet containing the data from the headband (eg. EEG data)
-	 * @param muse The headband that sent the information.
 	 */
-	fun receiveMuseDataPacket(p: MuseDataPacket?, muse: Muse?) {
+	fun receiveMuseDataPacket(p: MuseDataPacket?) {
 		writeDataPacketToFile(p)
+
 		// valuesSize returns the number of data values contained in the packet.
 		val n: Long = p.valuesSize()
 		if (fromFile) {
 			when (p.packetType()) {
 				EEG -> {
-					assert(eegBuffer!!.size >= n)
+					if (eegBuffer!!.size < n) throw AssertionError()
 					getEegChannelValues(eegBuffer, p)
 					eegStale = true
 				}
 				ACCELEROMETER -> {
-					assert(accelBuffer!!.size >= n)
+					if (accelBuffer!!.size < n) throw AssertionError()
 					getAccelValues(p)
 					accelStale = true
 				}
 				ALPHA_RELATIVE -> {
-					assert(alphaBuffer!!.size >= n)
+					if (alphaBuffer!!.size < n) throw AssertionError()
 					getEegChannelValues(alphaBuffer, p)
 					alphaStale = true
 				}
@@ -510,17 +568,23 @@ class MainActivity : Activity(), OnClickListener {
 		} else {
 			when (p.packetType()) {
 				ACCELEROMETER -> {
-					assert(accelBuffer!!.size >= n)
+					if (accelBuffer!!.size >= n) throw AssertionError()
 					getAccelValues(p)
 					accelStale = true
 				}
 				ALPHA_RELATIVE -> {
-					assert(alphaBuffer!!.size >= n)
+					if (alphaBuffer!!.size >= n) throw AssertionError()
 					getEegChannelValues(alphaBuffer, p)
 					alphaStale = true
 				}
-				HSI, EEG, ALPHA_ABSOLUTE, BETA_ABSOLUTE, DELTA_ABSOLUTE, GAMMA_ABSOLUTE, THETA_ABSOLUTE ->  //case THETA_RELATIVE:
-																											//case THETA_SCORE:
+				HSI,
+				EEG,
+				ALPHA_ABSOLUTE,
+				BETA_ABSOLUTE,
+				DELTA_ABSOLUTE,
+				GAMMA_ABSOLUTE,
+				THETA_ABSOLUTE ->                    //case THETA_RELATIVE:
+					//case THETA_SCORE:
 					// 1.3.0 handleWaivePacket(p, p.getValues());
 					handleWaivePacket(p, p.values())
 				BATTERY, DRL_REF, QUANTIZATION -> {
@@ -534,13 +598,14 @@ class MainActivity : Activity(), OnClickListener {
 	// kt:
 	private fun handleWaivePacket(p: MuseDataPacket?, data: ArrayList<Double?>?) //(MuseDataPacket p)
 	{
-		var elem1 = 0.0
-		var elem2 = 0.0
-		var elem3 = 0.0
-		var elem4 = 0.0
+		val elem1: Double
+		val elem2: Double
+		val elem3: Double
+		val elem4: Double
+
 		//final ArrayList<Double> data = p.getValues();
-		val got_data = false
-		if (pkt_timestamp == 0L || pkt_timestamp == -1L) { // 1.3.0 pkt_timestamp = p.getTimestamp();
+		if (pkt_timestamp == 0L || pkt_timestamp == -1L) {
+			// 1.3.0 pkt_timestamp = p.getTimestamp();
 			pkt_timestamp = p.timestamp()
 			if (pkt_timestamp_ref == 0L) {
 				pkt_timestamp_ref = pkt_timestamp
@@ -631,10 +696,10 @@ class MainActivity : Activity(), OnClickListener {
 				elem3 = data.get(Eeg.EEG3.ordinal())
 				// 1.3.0 elem4 = data.get(Eeg.TP10.ordinal());
 				elem4 = data.get(Eeg.EEG4.ordinal())
-				if (validSensor!![0] == true) horseshoeElem!![0] = elem1.toInt()
-				if (validSensor[1] == true) horseshoeElem!![1] = elem2.toInt()
-				if (validSensor[2] == true) horseshoeElem!![2] = elem3.toInt()
-				if (validSensor[3] == true) horseshoeElem!![3] = elem4.toInt()
+				if (validSensor!![0]) horseshoeElem!![0] = elem1.toInt()
+				if (validSensor[1]) horseshoeElem!![1] = elem2.toInt()
+				if (validSensor[2]) horseshoeElem!![2] = elem3.toInt()
+				if (validSensor[3]) horseshoeElem!![3] = elem4.toInt()
 				got_data_mask = got_data_mask or Horseshoe
 				Log.i("kt: hrs data ", Integer.toString(waive_pkt_cnt))
 			}
@@ -644,14 +709,38 @@ class MainActivity : Activity(), OnClickListener {
 		if (got_data_mask == AllDataMask) {
 			val cur_tstamp = tstamp - data_time_stamp_ref
 			val cur_pkt_tstamp = pkt_timestamp - pkt_timestamp_ref
-			val strData = cur_pkt_tstamp.toString() + "," + cur_tstamp + "," +
-					eegElem!![0] + "," + eegElem!![3] + "," + eegElem!![1] + "," + eegElem!![2] + "," +
-					alphaAbsoluteElem!![0] + "," + alphaAbsoluteElem!![3] + "," + alphaAbsoluteElem!![1] + "," + alphaAbsoluteElem!![2] + "," +
-					betaAbsoluteElem!![0] + "," + betaAbsoluteElem!![3] + "," + betaAbsoluteElem!![1] + "," + betaAbsoluteElem!![2] + "," +
-					deltaAbsoluteElem!![0] + "," + deltaAbsoluteElem!![3] + "," + deltaAbsoluteElem!![1] + "," + deltaAbsoluteElem!![2] + "," +
-					gammaAbsoluteElem!![0] + "," + gammaAbsoluteElem!![3] + "," + gammaAbsoluteElem!![1] + "," + gammaAbsoluteElem!![2] + "," +
-					thetaAbsoluteElem!![0] + "," + thetaAbsoluteElem!![3] + "," + thetaAbsoluteElem!![1] + "," + thetaAbsoluteElem!![2] + "," +
-					horseshoeElem!![0] + "," + horseshoeElem!![3] + "," + horseshoeElem!![1] + "," + horseshoeElem!![2] + "\r\n"
+			val strData = """
+                $cur_pkt_tstamp,
+                $cur_tstamp,
+                ${eegElem!![0]},
+                ${eegElem!![3]},
+                ${eegElem!![1]},
+                ${eegElem!![2]},
+                ${alphaAbsoluteElem!![0]},
+                ${alphaAbsoluteElem!![3]},
+                ${alphaAbsoluteElem!![1]},
+                ${alphaAbsoluteElem!![2]},
+                ${betaAbsoluteElem!![0]},
+                ${betaAbsoluteElem!![3]},
+                ${betaAbsoluteElem!![1]},
+                ${betaAbsoluteElem!![2]},
+                ${deltaAbsoluteElem!![0]},
+                ${deltaAbsoluteElem!![3]},
+                ${deltaAbsoluteElem!![1]},
+                ${deltaAbsoluteElem!![2]},
+                ${gammaAbsoluteElem!![0]},
+                ${gammaAbsoluteElem!![3]},
+                ${gammaAbsoluteElem!![1]},
+                ${gammaAbsoluteElem!![2]},
+                ${thetaAbsoluteElem!![0]},
+                ${thetaAbsoluteElem!![3]},
+                ${thetaAbsoluteElem!![1]},
+                ${thetaAbsoluteElem!![2]},
+                ${horseshoeElem!![0]},
+                ${horseshoeElem!![3]},
+                ${horseshoeElem!![1]},
+                ${horseshoeElem!![2]}
+                """.trimIndent()
 			pkt_timestamp = 0 // for the next time
 			waive_pkt_cnt++ // for debug
 			//if(waive_pkt_cnt == 5) //for debug
@@ -663,7 +752,8 @@ class MainActivity : Activity(), OnClickListener {
 				data_set_cnt++
 				//if (writeData.getBufferedMessagesSize() > 8096)
 				if (data_set_cnt == 5) // tune the final number
-				{ //Log.i("Muse packet timestamp=",  String.valueOf(muse_tstamp));
+				{
+					//Log.i("Muse packet timestamp=",  String.valueOf(muse_tstamp));
 					data_set_cnt = 0
 					try {
 						writeData.flush()
@@ -676,12 +766,15 @@ class MainActivity : Activity(), OnClickListener {
 	}
 
 	// kt:
-	private fun updateHorseshoe(data: ArrayList<Double?>?) { //Activity activity = activityRef.get();
+	private fun updateHorseshoe(data: ArrayList<Double?>?) {
+
+		//Activity activity = activityRef.get();
 		val activity: Activity? = this.getApplicationContext() as Activity?
 		if (activity != null) {
 			activity.runOnUiThread(object : Runnable() {
 				@Override
-				fun run() { //TextView tp9 = (TextView) findViewById(R.id.eeg_tp9);
+				fun run() {
+					//TextView tp9 = (TextView) findViewById(R.id.eeg_tp9);
 					// 1.3.0 TextView fp1 = (TextView) findViewById(R.id.eeg_fp1);
 					val fp1: TextView? = findViewById(R.id.eeg_af7) as TextView?
 					// 1.3.0 TextView fp2 = (TextView) findViewById(R.id.eeg_fp2);
@@ -689,23 +782,20 @@ class MainActivity : Activity(), OnClickListener {
 					//TextView tp10 = (TextView) findViewById(R.id.eeg_tp10);
 					//tp9.setText(String.format("%6.2f", data.get(Eeg.TP9.ordinal())));
 					// 1.3.0 fp1.setText(String.format("%6.2f", data.get(Eeg.FP1.ordinal())));
-					fp1.setText(String.format("%6.2f", data.get(Eeg.EEG2.ordinal())))
+					fp1.setText(String.format(locale, "%6.2f", data.get(Eeg.EEG2.ordinal())))
 					// 1.3.0 fp2.setText(String.format("%6.2f", data.get(Eeg.FP2.ordinal())));
-					fp2.setText(String.format("%6.2f", data.get(Eeg.EEG3.ordinal())))
+					fp2.setText(String.format(locale, "%6.2f", data.get(Eeg.EEG3.ordinal())))
 					//tp10.setText(String.format("%6.2f", data.get(Eeg.TP10.ordinal())));
 				}
 			})
 		}
 	}
 	// kt:
-
 	/**
 	 * You will receive a callback to this method each time an artifact packet is generated if you
 	 * have registered for the ARTIFACTS data type.  MuseArtifactPackets are generated when
 	 * eye blinks are detected, the jaw is clenched and when the headband is put on or removed.
 	 *
-	 * @param p    The artifact packet with the data from the headband.
-	 * @param muse The headband that sent the information.
 	 */
 	fun receiveMuseArtifactPacket(p: MuseArtifactPacket?, muse: Muse?) {}
 
@@ -734,7 +824,6 @@ class MainActivity : Activity(), OnClickListener {
 		accelBuffer[1] = p.getAccelerometerValue(Accelerometer.Y)
 		accelBuffer[2] = p.getAccelerometerValue(Accelerometer.Z)
 	}
-
 	//--------------------------------------
 	// UI Specific methods
 	/**
@@ -750,7 +839,7 @@ class MainActivity : Activity(), OnClickListener {
 		disconnectButton.setOnClickListener(this)
 		val pauseButton: Button? = findViewById(R.id.pause) as Button?
 		pauseButton.setOnClickListener(this)
-		spinnerAdapter = ArrayAdapter<String?>(this, android.R.layout.simple_spinner_item)
+		spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item)
 		val musesSpinner: Spinner? = findViewById(R.id.muses_spinner) as Spinner?
 		musesSpinner.setAdapter(spinnerAdapter)
 	}
@@ -789,9 +878,9 @@ class MainActivity : Activity(), OnClickListener {
 		val acc_x: TextView? = findViewById(R.id.acc_x) as TextView?
 		val acc_y: TextView? = findViewById(R.id.acc_y) as TextView?
 		val acc_z: TextView? = findViewById(R.id.acc_z) as TextView?
-		acc_x.setText(String.format("%6.2f", accelBuffer!![0]))
-		acc_y.setText(String.format("%6.2f", accelBuffer!![1]))
-		acc_z.setText(String.format("%6.2f", accelBuffer!![2]))
+		acc_x.setText(String.format(locale, "%6.2f", accelBuffer!![0]))
+		acc_y.setText(String.format(locale, "%6.2f", accelBuffer!![1]))
+		acc_z.setText(String.format(locale, "%6.2f", accelBuffer!![2]))
 	}
 
 	private fun updateEeg() {
@@ -799,23 +888,22 @@ class MainActivity : Activity(), OnClickListener {
 		val fp1: TextView? = findViewById(R.id.eeg_af7) as TextView?
 		val fp2: TextView? = findViewById(R.id.eeg_af8) as TextView?
 		val tp10: TextView? = findViewById(R.id.eeg_tp10) as TextView?
-		tp9.setText(String.format("%6.2f", eegBuffer!![0]))
-		fp1.setText(String.format("%6.2f", eegBuffer!![1]))
-		fp2.setText(String.format("%6.2f", eegBuffer!![2]))
-		tp10.setText(String.format("%6.2f", eegBuffer!![3]))
+		tp9.setText(String.format(locale, "%6.2f", eegBuffer!![0]))
+		fp1.setText(String.format(locale, "%6.2f", eegBuffer!![1]))
+		fp2.setText(String.format(locale, "%6.2f", eegBuffer!![2]))
+		tp10.setText(String.format(locale, "%6.2f", eegBuffer!![3]))
 	}
 
 	private fun updateAlpha() {
 		val elem1: TextView? = findViewById(R.id.elem1) as TextView?
-		elem1.setText(String.format("%6.2f", alphaBuffer!![0]))
+		elem1.setText(String.format(locale, "%6.2f", alphaBuffer!![0]))
 		val elem2: TextView? = findViewById(R.id.elem2) as TextView?
-		elem2.setText(String.format("%6.2f", alphaBuffer!![1]))
+		elem2.setText(String.format(locale, "%6.2f", alphaBuffer!![1]))
 		val elem3: TextView? = findViewById(R.id.elem3) as TextView?
-		elem3.setText(String.format("%6.2f", alphaBuffer!![2]))
+		elem3.setText(String.format(locale, "%6.2f", alphaBuffer!![2]))
 		val elem4: TextView? = findViewById(R.id.elem4) as TextView?
-		elem4.setText(String.format("%6.2f", alphaBuffer!![3]))
+		elem4.setText(String.format(locale, "%6.2f", alphaBuffer!![3]))
 	}
-
 	//--------------------------------------
 	// File I/O
 	/**
@@ -832,8 +920,8 @@ class MainActivity : Activity(), OnClickListener {
 			// MuseFileWriter will append to an existing file.
 			// In this case, we want to start fresh so the file
 			// if it exists.
-			if (file.exists()) {
-				file.delete()
+			if (file.exists()) if (file.delete()) {
+				Log.d(TAG, "Deleted " + file.getAbsolutePath())
 			}
 			Log.d(TAG, "Writing data to: " + file.getAbsolutePath())
 			fileWriter.set(MuseFileFactory.getMuseFileWriter(file))
@@ -883,10 +971,11 @@ class MainActivity : Activity(), OnClickListener {
 
 	// kt:
 	private fun playAudioFeedback(at_mode: Int) {
-		var tone: Int
-		val play_tone = 0
+		//int tone;
+		//int play_tone = 0;
 		var i = 0
 		var k: Int
+
 		// tone test
 		var j: Int
 		if (at_mode == 1) {
@@ -902,20 +991,25 @@ class MainActivity : Activity(), OnClickListener {
 			return  // test done
 		}
 		// end tone test
+
+
 		// normal operation
 		Log.i("Muse Headband kt:", "Starting ToneGenerator")
 		var toneG: ToneGenerator? = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+
 		// infinite - user can connect/disconnect multiple times without exiting the app
 		while (true) {
 			if (stopSounds != 0) {
-				toneG.stopTone()
-				toneG = null
-				Log.i("Muse Headband kt:", "Stopping ToneGenerator")
-				//stopSounds = 0;
+				if (toneG != null) {
+					toneG.stopTone()
+					toneG = null
+					Log.i("Muse Headband kt:", "Stopping ToneGenerator")
+				}
 				// put thread to sleep
 				try {
 					Thread.sleep(1000) //let CPU rest
 				} catch (e: Exception) {
+					Log.e(TAG, "Error stopping the Tone generator")
 				}
 				continue
 			}
@@ -931,7 +1025,8 @@ class MainActivity : Activity(), OnClickListener {
 			// we are here either becasue we scanned to the end of the array
 			// or we found a bad sensor
 			if (i != HorseshoeElemeToneMax) // if none bad, no sound
-			{ // we had bad sensor, play its sound
+			{
+				// we had bad sensor, play its sound
 				musePlayTone(toneG, i)
 			} else {
 				horseshoeElemeTone = 0 //restart scanning from the start of array
@@ -940,10 +1035,12 @@ class MainActivity : Activity(), OnClickListener {
 			try {
 				Thread.sleep(1000) //let CPU rest
 			} catch (e: Exception) {
+				Log.e(TAG, "Unable to put thread to sleep")
 			}
 		} // infinite loop
 	}
 
+	// kt:
 	// smf
 	private fun playMuseFile(fileName: File?) {
 		val tag = "playMuseFile()"
@@ -951,8 +1048,10 @@ class MainActivity : Activity(), OnClickListener {
 			Log.w(tag, "file doesn't exist")
 			return
 		}
+
 		// Get a file reader
 		val fileReader: MuseFileReader = MuseFileFactory.getMuseFileReader(fileName)
+
 		// Loop through the packages in the file
 		var res: Result = fileReader.gotoNextMessage()
 		while (res.getLevel() === ResultLevel.R_INFO && !res.getInfo().contains("EOF")) {
@@ -960,8 +1059,8 @@ class MainActivity : Activity(), OnClickListener {
 			val id: Int = fileReader.getMessageId()
 			val timestamp: Long = fileReader.getMessageTimestamp()
 			Log.d(tag, "type: " + type.toString().toString() +
-					" id: " + Integer.toString(id).toString() +
-					" timestamp: " + String.valueOf(timestamp))
+					" id: " + id.toString() +
+					" timestamp: " + timestamp)
 			when (type) {
 				EEG, BATTERY, ACCELEROMETER, QUANTIZATION -> {
 					val packet: MuseDataPacket = fileReader.getDataPacket()
@@ -972,8 +1071,7 @@ class MainActivity : Activity(), OnClickListener {
 					val museVersion: MuseVersion = fileReader.getVersion()
 					val version: String = museVersion.getFirmwareType().toString() +
 							" - " + museVersion.getFirmwareVersion() +
-							" - " + Integer.toString(
-							museVersion.getProtocolVersion())
+							" - " + museVersion.getProtocolVersion()
 					Log.d(tag, "version $version")
 					val activity: Activity = dataListener!!.activityRef.get()
 					// UI thread is used here only because we need to update
@@ -1005,12 +1103,12 @@ class MainActivity : Activity(), OnClickListener {
 				else -> {
 				}
 			}
+
 			// Read the next message.
 			res = fileReader.gotoNextMessage()
 		}
 	}
 	// smf
-
 	/**
 	 * Reads the provided .muse file and prints the data to the logcat.
 	 *
@@ -1020,6 +1118,7 @@ class MainActivity : Activity(), OnClickListener {
 	 */
 	private fun playMuseFile(name: String?) {
 		val tag = "playMuseFile()"
+
 		// Get the "/DOWNLOAD" directory path
 		val dir: File = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
 		val file = File(dir, name)
@@ -1027,8 +1126,10 @@ class MainActivity : Activity(), OnClickListener {
 			Log.w(tag, "file doesn't exist")
 			return
 		}
+
 		// Define a file reader
 		val fileReader: MuseFileReader = MuseFileFactory.getMuseFileReader(file)
+
 		// Loop through each message in the file.  gotoNextMessage will read the next message
 		// and return the result of the read operation as a Result.
 		var res: Result = fileReader.gotoNextMessage()
@@ -1037,10 +1138,15 @@ class MainActivity : Activity(), OnClickListener {
 			val id: Int = fileReader.getMessageId()
 			val timestamp: Long = fileReader.getMessageTimestamp()
 			Log.i(tag, "type: " + type.toString().toString() +
-					" id: " + Integer.toString(id).toString() +
-					" timestamp: " + String.valueOf(timestamp))
+					" id: " + id.toString() +
+					" timestamp: " + timestamp)
 			when (type) {
-				EEG, BATTERY, ACCELEROMETER, QUANTIZATION, GYRO, MUSE_ELEMENTS -> {
+				EEG,
+				BATTERY,
+				ACCELEROMETER,
+				QUANTIZATION,
+				GYRO,
+				MUSE_ELEMENTS -> {
 					val packet: MuseDataPacket = fileReader.getDataPacket()
 					Log.i(tag, "data packet: " + packet.packetType().toString())
 				}
@@ -1059,6 +1165,7 @@ class MainActivity : Activity(), OnClickListener {
 				else -> {
 				}
 			}
+
 			// Read the next message.
 			res = fileReader.gotoNextMessage()
 		}
@@ -1069,8 +1176,9 @@ class MainActivity : Activity(), OnClickListener {
 	//
 	// Each of these classes extend from the appropriate listener and contain a weak reference
 	// to the activity.  Each class simply forwards the messages it receives back to the Activity.
-	internal inner class MuseL(activityRef: WeakReference<MainActivity1?>?) : MuseListener() {
-		val activityRef: WeakReference<MainActivity1?>?
+	internal class MuseL(activityRef: WeakReference<MainActivity?>?) : MuseListener() {
+		val activityRef: WeakReference<MainActivity?>?
+
 		@Override
 		fun museListChanged() {
 			activityRef.get().museListChanged()
@@ -1081,8 +1189,9 @@ class MainActivity : Activity(), OnClickListener {
 		}
 	}
 
-	internal inner class ConnectionListener(activityRef: WeakReference<MainActivity1?>?) : MuseConnectionListener() {
-		val activityRef: WeakReference<MainActivity1?>?
+	internal class ConnectionListener(activityRef: WeakReference<MainActivity?>?) : MuseConnectionListener() {
+		val activityRef: WeakReference<MainActivity?>?
+
 		@Override
 		fun receiveMuseConnectionPacket(p: MuseConnectionPacket?, muse: Muse?) {
 			activityRef.get().receiveMuseConnectionPacket(p, muse)
@@ -1093,11 +1202,12 @@ class MainActivity : Activity(), OnClickListener {
 		}
 	}
 
-	internal inner class DataListener(activityRef: WeakReference<MainActivity1?>?) : MuseDataListener() {
-		val activityRef: WeakReference<MainActivity1?>?
+	internal class DataListener(activityRef: WeakReference<MainActivity?>?) : MuseDataListener() {
+		val activityRef: WeakReference<MainActivity?>?
+
 		@Override
 		fun receiveMuseDataPacket(p: MuseDataPacket?, muse: Muse?) {
-			activityRef.get().receiveMuseDataPacket(p, muse)
+			activityRef.get().receiveMuseDataPacket(p)
 		}
 
 		@Override
@@ -1113,31 +1223,29 @@ class MainActivity : Activity(), OnClickListener {
 	// kt: new stuff
 	private fun musePlayTone(paramToneGenerator: ToneGenerator?, toneIdx: Int) {
 		var paramToneGenerator: ToneGenerator? = paramToneGenerator
-		if (validSensor!![toneIdx] == false) {
-			return
-		}
-		if (paramToneGenerator == null) {
-			paramToneGenerator = ToneGenerator(4, 100)
-		}
-		while (true) {
-			paramToneGenerator.startTone(HorseshoeTones!![toneIdx])
-			try {
-				Thread.sleep(tone_on_duration / 8)
-				paramToneGenerator.stopTone()
+		if (validSensor!![toneIdx]) {
+			if (paramToneGenerator == null) {
+				paramToneGenerator = ToneGenerator(4, 100)
+			}
+			while (true) {
+				paramToneGenerator.startTone(HorseshoeTones!![toneIdx])
 				try {
-					Thread.sleep(tone_off_duration / 2)
-					return
+					Thread.sleep(tone_on_duration / 8)
+					paramToneGenerator.stopTone()
+					try {
+						Thread.sleep(tone_off_duration / 2)
+						return
+					} catch (e: Exception) {
+						Log.e("Muse Headband exception", e.toString())
+					}
 				} catch (e: Exception) {
 					Log.e("Muse Headband exception", e.toString())
 				}
-			} catch (e: Exception) {
-				Log.e("Muse Headband exception", e.toString())
 			}
 		}
 	} // kt:
 
 	companion object {
-		//int artifactsElem = 0;
 		// bit masks for packet types:
 		const val AlphaAbsolute = 1
 		const val BetaAbsolute = 2
@@ -1146,7 +1254,6 @@ class MainActivity : Activity(), OnClickListener {
 		const val ThetaAbsolute = 0x10
 		const val EegAbsolute = 0x20
 		const val Horseshoe = 0x80
-		//public static final int Artifacts    = 0x40;
 		const val AllDataMask = AlphaAbsolute or
 				BetaAbsolute or
 				DeltaAbsolute or
@@ -1161,5 +1268,9 @@ class MainActivity : Activity(), OnClickListener {
 				ToneGenerator.TONE_PROP_BEEP2,
 				ToneGenerator.TONE_CDMA_ALERT_INCALL_LITE,  //ToneGenerator.TONE_PROP_BEEP,
 				ToneGenerator.TONE_CDMA_ABBR_INTERCEPT)
+
+		// kt:
+		// smf:
+		val locale: Locale? = ENGLISH
 	}
 }
